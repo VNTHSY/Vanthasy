@@ -9,10 +9,12 @@ const express = require("express");
 const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
-const { db } = require("../handlers/db.js");
-const config = require("../config.json");
+const { db } = require("../../handlers/db.js");
+const config = require("../../config.json");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
 const saltRounds = process.env.SALT_ROUNDS || 10;
 
 async function doesUserExist(username) {
@@ -25,13 +27,12 @@ async function doesUserExist(username) {
 }
 
 router.get("/account", async (req, res) => {
-  let users = (await db.get("users")) || [];
-
   res.render("account", {
     req,
     user: req.user,
-    users,
+    users: (await db.get("users")) || [],
     name: (await db.get("name")) || "Overvoid",
+    logo: (await db.get("logo")) || false,
   });
 });
 
@@ -106,6 +107,112 @@ router.post("/update-username", async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating username:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+router.get("/enable-2fa", async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("User is not authenticated.");
+    }
+    const users = await db.get("users");
+    const currentUser = users.find(
+      (user) => user.username === req.user.username
+    );
+    const secret = speakeasy.generateSecret({
+      length: 20,
+      name: `Overvoid (${currentUser.username})`,
+      issuer: "Overvoid",
+    });
+
+    const updatedUsers = users.map((user) => {
+      if (user.username === req.user.username) {
+        return { ...user, twoFASecret: secret.base32, twoFAEnabled: false };
+      } else {
+        return user;
+      }
+    });
+    await db.set("users", updatedUsers);
+
+    qrcode.toDataURL(secret.otpauth_url, async (err, data_url) => {
+      if (err) return res.status(500).send("Error generating QR Code");
+      res.render("enable-2fa", {
+        req,
+        user: req.user,
+        users,
+        name: (await db.get("name")) || "Overvoid",
+        logo: (await db.get("logo")) || false,
+        qrCode: data_url,
+      });
+    });
+  } catch (error) {
+    console.error("Error enabling 2FA:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+router.post("/verify-2fa", async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("User is not authenticated.");
+    }
+
+    const { token } = req.body;
+    const users = await db.get("users");
+    const currentUser = users.find(
+      (user) => user.username === req.user.username
+    );
+
+    const verified = speakeasy.totp.verify({
+      secret: currentUser.twoFASecret,
+      encoding: "base32",
+      token,
+    });
+
+    if (verified) {
+      const updatedUsers = users.map((user) => {
+        if (user.username === req.user.username) {
+          return { ...user, twoFAEnabled: true };
+        } else {
+          return user;
+        }
+      });
+      await db.set("users", updatedUsers);
+
+      res.redirect("/account?msg=2FAEnabled");
+    } else {
+      res.status(400).send("Invalid token");
+    }
+  } catch (error) {
+    console.error("Error verifying 2FA:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+router.post("/disable-2fa", async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("User is not authenticated.");
+    }
+
+    const users = await db.get("users");
+    const currentUser = users.find(
+      (user) => user.username === req.user.username
+    );
+
+    const updatedUsers = users.map((user) => {
+      if (user.username === req.user.username) {
+        return { ...user, twoFAEnabled: false, twoFASecret: null };
+      } else {
+        return user;
+      }
+    });
+    await db.set("users", updatedUsers);
+
+    res.redirect("/account");
+  } catch (error) {
+    console.error("Error disabling 2FA:", error);
     res.status(500).send("Internal Server Error");
   }
 });
@@ -193,7 +300,6 @@ router.post("/validate-password", async (req, res) => {
         currentPassword,
         currentUser.password
       );
-      console.log(currentPassword, currentUser.password, isPasswordValid);
 
       if (isPasswordValid) {
         res.status(200).json({ valid: true });

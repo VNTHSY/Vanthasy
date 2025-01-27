@@ -7,9 +7,10 @@
 const express = require("express");
 const fs = require("fs").promises;
 const router = express.Router();
+const config = require("../../config.json");
 
-const { isAuthenticated } = require("../handlers/auth.js");
-const { db } = require("../handlers/db.js");
+const { isAuthenticated } = require("../../handlers/auth.js");
+const { db } = require("../../handlers/db.js");
 
 /**
  * Dynamically reads the page configurations from a JSON file and sets up express routes accordingly.
@@ -30,20 +31,55 @@ async function setupRoutes() {
     pages.forEach(async (page) => {
       if (page.requiresAuth) {
         router.get(page.path, isAuthenticated, async (req, res) => {
-          const instances =
-            (await db.get(req.user.userId + "_instances")) || [];
-          res.render(page.template, {
-            req,
-            user: req.user,
-            instances,
-            name: (await db.get("name")) || "Overvoid",
-          });
+          try {
+            const userId = req.user.userId;
+            let instances = (await db.get(userId + "_instances")) || [];
+            let adminInstances = [];
+            if (req.user.admin) {
+              const allInstances = (await db.get("instances")) || [];
+              adminInstances = allInstances.filter(
+                (instance) => instance.User == userId
+              );
+            }
+
+            const users = (await db.get("users")) || [];
+
+            const authenticatedUser = users.find(
+              (user) => user.userId === userId
+            );
+            if (!authenticatedUser) {
+              throw new Error("Authenticated user not found in database.");
+            }
+            const subUserInstances = authenticatedUser.accessTo || [];
+            for (const instanceId of subUserInstances) {
+              const instanceData = await db.get(`${instanceId}_instance`);
+              if (instanceData) {
+                instances.push(instanceData);
+              }
+            }
+
+            res.render(page.template, {
+              req,
+              user: req.user,
+              name: (await db.get("name")) || "Overvoid",
+              logo: (await db.get("logo")) || false,
+              settings: await db.get("settings"),
+              config,
+              instances,
+              adminInstances,
+            });
+          } catch (error) {
+            console.error("Error fetching subuser instances:", error);
+            res.status(500).send("Internal Server Error");
+          }
         });
       } else {
         router.get(page.path, async (req, res) => {
           res.render(page.template, {
             req,
             name: (await db.get("name")) || "Overvoid",
+            logo: (await db.get("logo")) || false,
+            settings: await db.get("settings"),
           });
         });
       }
