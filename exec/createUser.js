@@ -11,40 +11,48 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
-async function doesUserExist(username, email) {
-    const users = await db.get('users');
-    if (users) {
-        return users.some(user => user.username === username || user.email === email);
-    } else {
-        return false; // If no users found, return false
-    }
+// for command-line arguments
+function parseArguments() {
+    const args = {};
+    process.argv.slice(2).forEach(arg => {
+        const [key, value] = arg.split('=');
+        if (key.startsWith('--')) {
+            args[key.slice(2)] = value;
+        }
+    });
+    return args;
 }
 
-// Function to create the users table and add the first user
+async function doesUserExist(username) {
+    const users = await db.get('users');
+    return users.find(user => user.username === username);
+}
+
+async function doesEmailExist(email) {
+    const users = await db.get('users');
+    return users.find(user => user.email === email);
+}
+
 async function initializeUsersTable(username, email, password) {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const userId = uuidv4();
-    const users = [{ userId, username, email, password: hashedPassword, admin: true }];
+    const users = [{ userId, username, email, password: hashedPassword, accessTo: [], admin: true, verified: true }];
     return db.set('users', users);
 }
 
-// Function to add a new user to the existing users table
 async function addUserToUsersTable(username, email, password) {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const userId = uuidv4();
     const users = await db.get('users') || [];
-    users.push({ userId, username, email, password: hashedPassword, admin: true });
+    users.push({ userId, username, email, password: hashedPassword, accessTo: [], admin: false, verified: false });
     return db.set('users', users);
 }
 
-// Function to create a new user
 async function createUser(username, email, password) {
     const users = await db.get('users');
     if (!users) {
-        // If users table doesn't exist, initialize it with the first user
-        return initializeUsersTable(username, email, password);
+        await initializeUsersTable(username, email, password);
     } else {
-        // If users table exists, add the new user to it
         return addUserToUsersTable(username, email, password);
     }
 }
@@ -57,23 +65,55 @@ function askQuestion(question) {
     });
 }
 
-async function main() {
-    log.init('create a new *admin* user for the panel:');
-    log.init('you can make regular users from the admin -> users page!');
-    const username = await askQuestion("username: ");
-    const email = await askQuestion("email: ");
-    const password = await askQuestion("password: ");
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
 
-    const userExists = await doesUserExist(username, email);
-    if (userExists) {
-        log.error("user or email already exists!");
+async function main() {
+    const args = parseArguments();
+
+    let username, email, password;
+
+    if (args.username && args.email && args.password) {
+        username = args.username;
+        email = args.email;
+        password = args.password;
+    } else {
+        log.init('Create a new *admin* user fot the Overvoid Panel');
+        log.init('You can make regular users from the admin -> users page');
+
+        username = await askQuestion('Username: ');
+        email = await askQuestion('Email: ');
+
+        if (!isValidEmail(email)) {
+            log.error('Invalid email address.');
+            rl.close();
+            return;
+        }
+
+        password = await askQuestion('Password: ');
+    }
+
+    const userExists = await doesUserExist(username);
+    const emailExists = await doesEmailExist(email);
+    if (userExists || emailExists) {
+        log.error('User already exists with that username or email.');
         rl.close();
         return;
     }
 
-    await createUser(username, email, password);
-    log.info("done! user created.");
-    rl.close();
+    try {
+        await createUser(username, email, password);
+        log.info('User created successfully.');
+    } catch (error) {
+        log.error(`Failed to create user: ${error}`);
+    } finally {
+        rl.close();
+    }
 }
 
-main();
+main().catch(err => {
+    console.error('Unexpected error:', err);
+    rl.close();
+});
