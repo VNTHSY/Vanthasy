@@ -1,6 +1,9 @@
 {
+  "baseUri": "http://localhost:3001",
   "port": 3001,
-  "version": "1.0.0",
-  "_note": "The key is only used by Overvoid to get the images and instances. Not much important or critical data in that.",
-  "key": "Overvoid_default_key"
-}
+  "domain": "localhost",
+  "mode": "production",
+  "version": "0.3.0",
+  "ogTitle": "Overvoid Panel",
+  "ogDescription": "This is an instance of the Overvoid Panel - learn more at github.com/OvervoidLabs"
+} 
