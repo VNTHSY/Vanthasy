@@ -5,12 +5,12 @@
  * for instance creation and deployment.
  */
 
-const express = require('express');
-const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
-const { db } = require('../handlers/db.js'); // Import the custom database handler
-const basicAuth = require('express-basic-auth');
-const config = require('../config.json')
+const express = require("express");
+const axios = require("axios");
+const { v4: uuidv4 } = require("uuid");
+const { db } = require("../handlers/db.js"); // Import the custom database handler
+const basicAuth = require("express-basic-auth");
+const config = require("../config.json");
 
 const router = express.Router();
 
@@ -22,13 +22,17 @@ const router = express.Router();
  *
  * @returns {Response} Sends a JSON response containing an array of instances.
  */
-router.get('/instances/list', basicAuth({
-  users: { 'Vanthasy': config.key },
-  challenge: true, // we'll disable this in prod
-}), async (req, res) => {
-  let instances = await db.get('instances');
-  res.json(instances);
-});
+router.get(
+  "/instances/list",
+  basicAuth({
+    users: { Overvoid: config.key },
+    challenge: true, // we'll disable this in prod
+  }),
+  async (req, res) => {
+    let instances = await db.get("instances");
+    res.json(instances);
+  }
+);
 
 /**
  * GET /images/list
@@ -36,13 +40,17 @@ router.get('/instances/list', basicAuth({
  *
  * @returns {Response} Sends a JSON response containing an array of images.
  */
-router.get('/images/list', basicAuth({
-  users: { 'Vanthasy': config.key },
-  challenge: true, // we'll disable this in prod
-}), async (req, res) => {
-  let images = await db.get('images');
-  res.json(images);
-});
+router.get(
+  "/images/list",
+  basicAuth({
+    users: { Overvoid: config.key },
+    challenge: true, // we'll disable this in prod
+  }),
+  async (req, res) => {
+    let images = await db.get("images");
+    res.json(images);
+  }
+);
 
 /**
  * GET /instances/deploy
@@ -63,7 +71,7 @@ router.get('/images/list', basicAuth({
  * @returns {Response} Sends a 201 status with instance deployment details if successful, or an error status if deployment fails.
  */
 
-router.get('/instances/deploy', async (req, res) => {
+router.get("/instances/deploy", async (req, res) => {
   const {
     image,
     memory,
@@ -73,10 +81,11 @@ router.get('/instances/deploy', async (req, res) => {
     name,
     user,
     configfilepath,
-    configfilecontent
+    configfilecontent,
   } = req.query;
 
-  if (!image || !memory || !cpu || !ports || !nodeId || !name || !user) return res.send('Missing parameters');
+  if (!image || !memory || !cpu || !ports || !nodeId || !name || !user)
+    return res.send("Missing parameters");
 
   const NodeId = nodeId;
   const Memory = memory ? parseInt(memory) : undefined;
@@ -84,18 +93,18 @@ router.get('/instances/deploy', async (req, res) => {
   const ExposedPorts = {};
   const PortBindings = {};
 
-  const Node = await db.get(NodeId + '_node');
-  if (!Node) return res.send('Invalid node');
+  const Node = await db.get(NodeId + "_node");
+  if (!Node) return res.send("Invalid node");
 
   const RequestData = {
-    method: 'post',
+    method: "post",
     url: `http://${Node.address}:${Node.port}/instances/create`,
     auth: {
-      username: 'Vanthasy',
-      password: Node.apiKey
+      username: "Overvoid",
+      password: Node.apiKey,
     },
-    headers: { 
-      'Content-Type': 'application/json'
+    headers: {
+      "Content-Type": "application/json",
     },
     data: {
       Name: name,
@@ -103,14 +112,14 @@ router.get('/instances/deploy', async (req, res) => {
       Memory: memory ? parseInt(memory) * 1024 * 1024 : undefined,
       Cpu: cpu ? parseInt(cpu) : undefined,
       ExposedPorts: {},
-      PortBindings: {}
-    }
+      PortBindings: {},
+    },
   };
 
   // Process ports
   if (ports) {
-    ports.split(',').forEach(portMapping => {
-      const [containerPort, hostPort] = portMapping.split(':');
+    ports.split(",").forEach((portMapping) => {
+      const [containerPort, hostPort] = portMapping.split(":");
       const key = `${containerPort}/tcp`;
       RequestData.data.ExposedPorts[key] = {};
       RequestData.data.PortBindings[key] = [{ HostPort: hostPort }];
@@ -130,8 +139,8 @@ router.get('/instances/deploy', async (req, res) => {
 
     // Attempt to get the user's current server list
     const userId = user;
-    const userServers = await db.get(`${userId}_instances`) || [];
-    const globalServers = await db.get('instances') || [];
+    const userServers = (await db.get(`${userId}_instances`)) || [];
+    const globalServers = (await db.get("instances")) || [];
 
     // Append the new server ID to the user's server list
     userServers.push({
@@ -142,7 +151,7 @@ router.get('/instances/deploy', async (req, res) => {
       Memory,
       Cpu,
       ExposedPorts,
-      PortBindings
+      PortBindings,
     });
 
     globalServers.push({
@@ -153,8 +162,8 @@ router.get('/instances/deploy', async (req, res) => {
       Memory,
       Cpu,
       ExposedPorts,
-      PortBindings
-  });
+      PortBindings,
+    });
 
     // Save the updated list back to the database
     await db.set(`${userId}_instances`, userServers);
@@ -169,19 +178,19 @@ router.get('/instances/deploy', async (req, res) => {
       Memory,
       Cpu,
       ExposedPorts,
-      PortBindings
+      PortBindings,
     });
 
     res.status(201).json({
-      Message: 'Container created successfully and added to user\'s servers',
+      Message: "Container created successfully and added to user's servers",
       ContainerId: response.data.containerId,
-      VolumeId: response.data.volumeId
+      VolumeId: response.data.volumeId,
     });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     res.status(500).json({
-      error: 'Failed to create container',
-      details: error ? error.data : 'No additional error info'
+      error: "Failed to create container",
+      details: error ? error.data : "No additional error info",
     });
   }
 });

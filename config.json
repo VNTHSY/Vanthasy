@@ -1,6 +1,6 @@
 {
-    "port": 3001,
-    "version": "1.0.0",
-    "_note": "The key is only used by vanthasy to get the images and instances. Not much important or critical data in that.",
-    "key": "vanthasy_default_key"
+  "port": 3001,
+  "version": "1.0.0",
+  "_note": "The key is only used by Overvoid to get the images and instances. Not much important or critical data in that.",
+  "key": "Overvoid_default_key"
 }

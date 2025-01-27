@@ -4,12 +4,12 @@
  * accesses a database to fetch user-specific or global information to render pages.
  */
 
-const express = require('express');
-const fs = require('fs').promises;
+const express = require("express");
+const fs = require("fs").promises;
 const router = express.Router();
 
-const { isAuthenticated } = require('../handlers/auth.js');
-const { db } = require('../handlers/db.js');
+const { isAuthenticated } = require("../handlers/auth.js");
+const { db } = require("../handlers/db.js");
 
 /**
  * Dynamically reads the page configurations from a JSON file and sets up express routes accordingly.
@@ -23,25 +23,34 @@ const { db } = require('../handlers/db.js');
  */
 
 async function setupRoutes() {
-    try {
-        const data = await fs.readFile('pages.json', 'utf8'); 
-        const pages = JSON.parse(data);
+  try {
+    const data = await fs.readFile("pages.json", "utf8");
+    const pages = JSON.parse(data);
 
-        pages.forEach(async page => {
-            if (page.requiresAuth) {
-                router.get(page.path, isAuthenticated, async (req, res) => {
-                    const instances = await db.get(req.user.userId + '_instances') || [];
-                    res.render(page.template, { req, user: req.user, instances, name: await db.get('name') || 'Vanthasy' });
-                });
-            } else {
-                router.get(page.path, async (req, res) => {
-                    res.render(page.template, { req, name: await db.get('name') || 'Vanthasy' });
-                });
-            }
+    pages.forEach(async (page) => {
+      if (page.requiresAuth) {
+        router.get(page.path, isAuthenticated, async (req, res) => {
+          const instances =
+            (await db.get(req.user.userId + "_instances")) || [];
+          res.render(page.template, {
+            req,
+            user: req.user,
+            instances,
+            name: (await db.get("name")) || "Overvoid",
+          });
         });
-    } catch (error) {
-        console.error('Error setting up routes:', error);
-    }
+      } else {
+        router.get(page.path, async (req, res) => {
+          res.render(page.template, {
+            req,
+            name: (await db.get("name")) || "Overvoid",
+          });
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Error setting up routes:", error);
+  }
 }
 
 /**
@@ -52,8 +61,8 @@ async function setupRoutes() {
  * @returns {Response} Redirects to the '/instances' page.
  */
 
-router.get('/', async (req, res) => {
-    res.redirect('../instances')
+router.get("/", async (req, res) => {
+  res.redirect("../instances");
 });
 
 // Setup routes

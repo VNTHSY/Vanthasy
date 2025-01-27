@@ -15,7 +15,7 @@
       <div class="sm:flex sm:items-center px-8 pt-4">
          <div class="sm:flex-auto">
             <h1 class="text-base font-semibold leading-6 text-white">Manage Instance</h1>
-            <p class="mt-1 tracking-tight text-sm text-neutral-500">View, update and manage an instance on the Vanthasy panel.</p>
+            <p class="mt-1 tracking-tight text-sm text-neutral-500">View, update and manage an instance on the Overvoid panel.</p>
          </div>
          <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex">
             <button id="startButton" type="button" class="block rounded-l-lg bg-emerald-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg hover:bg-emerald-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
@@ -165,7 +165,7 @@
                   term.clear();
                   ws.close(); // Close the current connection to trigger onclose and reconnect
               }
-              if (line.includes("Vanthasyd instance appears to be down")) {
+              if (line.includes("Overvoidd instance appears to be down")) {
                   ws.close();
                   daemonIsDown.classList.remove('hidden')
               } else {

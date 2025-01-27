@@ -5,7 +5,7 @@
       <div class="sm:flex-auto">
         <h1 class="text-base font-semibold leading-6 text-white">Users</h1>
         <p class="mt-1 tracking-tight text-sm text-neutral-500">
-          A list of all the users set up on the Vanthasy panel.
+          A list of all the users set up on the Overvoid panel.
         </p>
       </div>
       <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
@@ -116,8 +116,8 @@
                   id="removeButton"
                   type="button"
                   class="removeButton block rounded-lg bg-red-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg hover:bg-red-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                  data-user-id="<%= user.userId %>"                
-                  >
+                  data-user-id="<%= user.userId %>"
+                >
                   Remove
                 </button>
               </div>
@@ -181,7 +181,7 @@
          <input id="nodePort" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 mb-6 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="8080">
 
          <label class="text-neutral-400 text-sm tracking-tight mb-2">Access Key:</label>
-         <input id="nodeApiKey" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 mb-6 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="Vanthasyd_xxxxxxxxxxxxxxxx"> -->
+         <input id="nodeApiKey" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 mb-6 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="Overvoidd_xxxxxxxxxxxxxxxx"> -->
 
         <button
           id="createNodeBtn"
@@ -217,8 +217,8 @@
       const password = document.getElementById("userPass").value;
       const adminString = document.getElementById("userAdmin").value; // Get the admin value as a string
 
-// Convert the admin value to a boolean
-const admin = adminString === "true";
+      // Convert the admin value to a boolean
+      const admin = adminString === "true";
 
       const nodeData = {
         username,
@@ -246,54 +246,53 @@ const admin = adminString === "true";
           alert("User created successfully");
           window.location.reload();
         })
-        .catch((error) =>
-          alert("Error creating user: " + error.message)
-        );
+        .catch((error) => alert("Error creating user: " + error.message));
     });
 </script>
 <!-- remove -->
 <script>
-  document.querySelectorAll('.removeButton').forEach(button => {
-    button.addEventListener('click', function() {
+  document.querySelectorAll(".removeButton").forEach((button) => {
+    button.addEventListener("click", function () {
       const userId = this.dataset.userId; // Get the user ID from the button's data attribute
 
       // Check if there is only one user in the database
-      const totalUsers = document.querySelectorAll('.removeButton').length;
+      const totalUsers = document.querySelectorAll(".removeButton").length;
       if (totalUsers === 1) {
-        alert('Cannot delete the only user in the database.');
+        alert("Cannot delete the only user in the database.");
         return;
       }
 
       // Check if the user being deleted is the current user
-      const currentUserId = '<%= user.userId %>';
+      const currentUserId = "<%= user.userId %>";
       if (userId === currentUserId) {
-        alert('Cannot delete the current user.');
+        alert("Cannot delete the current user.");
         return;
       }
 
       // Confirm with the user before deleting
-      const confirmation = confirm('Are you sure you want to delete this user?');
+      const confirmation = confirm(
+        "Are you sure you want to delete this user?"
+      );
       if (!confirmation) return; // If the user cancels, do nothing
 
-      fetch('/user/delete', {
-        method: 'DELETE',
+      fetch("/user/delete", {
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId }) // Send the user ID in the request body
+        body: JSON.stringify({ userId }), // Send the user ID in the request body
       })
-      .then(response => {
-        if (response.ok) {
-          // If deletion is successful, reload the page
-          window.location.reload();
-        } else {
-          throw new Error('Failed to delete user');
-        }
-      })
-      .catch(error => alert('Error deleting user: ' + error.message));
+        .then((response) => {
+          if (response.ok) {
+            // If deletion is successful, reload the page
+            window.location.reload();
+          } else {
+            throw new Error("Failed to delete user");
+          }
+        })
+        .catch((error) => alert("Error deleting user: " + error.message));
     });
   });
 </script>
-
 
 <%- include('../components/footer') %>

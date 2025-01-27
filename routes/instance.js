@@ -4,16 +4,16 @@
  * Requires user authentication for access to the endpoints.
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
-const WebSocket = require('ws');
-const axios = require('axios');
-const { db } = require('../handlers/db.js');
-const multer = require('multer');
-const upload = multer({ dest: 'tmp/' });
-const FormData = require('form-data');
-const fs = require('node:fs');
+const { v4: uuidv4 } = require("uuid");
+const WebSocket = require("ws");
+const axios = require("axios");
+const { db } = require("../handlers/db.js");
+const multer = require("multer");
+const upload = multer({ dest: "tmp/" });
+const FormData = require("form-data");
+const fs = require("node:fs");
 
 /**
  * Checks if the user is authorized to access the specified container ID.
@@ -22,18 +22,20 @@ const fs = require('node:fs');
  * @returns {Promise<boolean>} True if the user is authorized, otherwise false.
  */
 async function isUserAuthorizedForContainer(userId, containerId) {
-    try {
-        const userInstances = await db.get(userId + '_instances');
-        if (!userInstances) {
-            console.error('No instances found for user:', userId);
-            return false;
-        }
-
-        return userInstances.some(instance => instance.ContainerId === containerId);
-    } catch (error) {
-        console.error('Error fetching user instances:', error);
-        return false;
+  try {
+    const userInstances = await db.get(userId + "_instances");
+    if (!userInstances) {
+      console.error("No instances found for user:", userId);
+      return false;
     }
+
+    return userInstances.some(
+      (instance) => instance.ContainerId === containerId
+    );
+  } catch (error) {
+    console.error("Error fetching user instances:", error);
+    return false;
+  }
 }
 
 /**
@@ -47,22 +49,30 @@ async function isUserAuthorizedForContainer(userId, containerId) {
  * or the ID is not provided. Otherwise, renders the instance page with appropriate data.
  */
 router.get("/instance/:id", async (req, res) => {
-    if (!req.user) return res.redirect('/')
+  if (!req.user) return res.redirect("/");
 
-    const { id } = req.params;
-    const instance = await db.get(id + '_instance');
+  const { id } = req.params;
+  const instance = await db.get(id + "_instance");
 
-    if (!id) return res.redirect('/'); // no ID
+  if (!id) return res.redirect("/"); // no ID
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
 
-    if (!instance || !id) return res.redirect('../instances')
+  if (!instance || !id) return res.redirect("../instances");
 
-    res.render('instance', { req, instance, user: req.user, name: await db.get('name') || 'Vanthasy' });
+  res.render("instance", {
+    req,
+    instance,
+    user: req.user,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
 
 /**
@@ -79,62 +89,80 @@ router.get("/instance/:id", async (req, res) => {
  * retrieval and invalid node configurations.
  */
 router.get("/instance/:id/files", async (req, res) => {
-    if (!req.user) {
-        return res.redirect('/');
+  if (!req.user) {
+    return res.redirect("/");
+  }
+
+  const { id } = req.params;
+  if (!id) {
+    return res.redirect("../instances");
+  }
+
+  const instance = await db.get(id + "_instance").catch((err) => {
+    console.error("Failed to fetch instance:", err);
+    return null; // Handle the error and return null if instance fetch fails
+  });
+
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
+
+  if (!instance || !instance.VolumeId) {
+    return res.redirect("../instances");
+  }
+
+  let query;
+  if (req.query.path) {
+    query = "?path=" + req.query.path;
+  } else {
+    query = "";
+  }
+
+  if (instance.Node && instance.Node.address && instance.Node.port) {
+    const RequestData = {
+      method: "get",
+      url: `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files${query}`,
+      auth: {
+        username: "Overvoid",
+        password: instance.Node.apiKey,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    try {
+      const response = await axios(RequestData);
+      const files = response.data.files || [];
+
+      res.render("files", {
+        req,
+        files,
+        user: req.user,
+        name: (await db.get("name")) || "Overvoid",
+      });
+    } catch (error) {
+      const errorMessage =
+        error.response && error.response.data
+          ? error.response.data.message
+          : "Connection to node failed.";
+      res
+        .status(500)
+        .render("500", {
+          error: errorMessage,
+          req,
+          user: req.user,
+          name: (await db.get("name")) || "Overvoid",
+        });
     }
-
-    const { id } = req.params;
-    if (!id) {
-        return res.redirect('../instances');
-    }
-
-    const instance = await db.get(id + '_instance').catch(err => {
-        console.error('Failed to fetch instance:', err);
-        return null; // Handle the error and return null if instance fetch fails
-    });
-
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
-
-    if (!instance || !instance.VolumeId) {
-        return res.redirect('../instances');
-    }
-
-    let query;
-    if (req.query.path) {
-        query = '?path=' + req.query.path
-    } else {
-        query = ''
-    }
-
-    if (instance.Node && instance.Node.address && instance.Node.port) {
-        const RequestData = {
-            method: 'get',
-            url: `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files${query}`,
-            auth: {
-                username: 'Vanthasy',
-                password: instance.Node.apiKey
-            },
-            headers: { 
-                'Content-Type': 'application/json'
-            }
-        };
-
-        try {
-            const response = await axios(RequestData);
-            const files = response.data.files || [];
-
-            res.render('files', { req, files, user: req.user, name: await db.get('name') || 'Vanthasy' });
-        } catch (error) {
-            const errorMessage = error.response && error.response.data ? error.response.data.message : 'Connection to node failed.';
-            res.status(500).render('500', { error: errorMessage, req, user: req.user, name: await db.get('name') || 'Vanthasy' });
-        }
-    } else {
-        res.status(500).send('Invalid instance node configuration');
-    }
+  } else {
+    res.status(500).send("Invalid instance node configuration");
+  }
 });
 
 /**
@@ -150,62 +178,80 @@ router.get("/instance/:id/files", async (req, res) => {
  * @returns {Response} Renders the view file page with 'file' as the content.
  */
 router.get("/instance/:id/files/view/:file", async (req, res) => {
-    if (!req.user) {
-        return res.redirect('/');
+  if (!req.user) {
+    return res.redirect("/");
+  }
+
+  const { id, file } = req.params;
+  if (!id || !file) {
+    return res.redirect("../instances");
+  }
+
+  const instance = await db.get(id + "_instance").catch((err) => {
+    console.error("Failed to fetch instance:", err);
+    return null;
+  });
+
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
+
+  if (!instance || !instance.VolumeId) {
+    return res.redirect("../instances");
+  }
+
+  let query;
+  if (req.query.path) {
+    query = "?path=" + req.query.path;
+  } else {
+    query = "";
+  }
+
+  if (instance.Node && instance.Node.address && instance.Node.port) {
+    const RequestData = {
+      method: "get",
+      url: `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/view/${file}${query}`,
+      auth: {
+        username: "Overvoid",
+        password: instance.Node.apiKey,
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    try {
+      const response = await axios(RequestData);
+      const file = response.data.content || [];
+
+      res.render("file", {
+        req,
+        file,
+        user: req.user,
+        name: (await db.get("name")) || "Overvoid",
+      });
+    } catch (error) {
+      const errorMessage =
+        error.response && error.response.data
+          ? error.response.data.message
+          : "Connection to node failed.";
+      res
+        .status(500)
+        .render("500", {
+          error: errorMessage,
+          req,
+          user: req.user,
+          name: (await db.get("name")) || "Overvoid",
+        });
     }
-
-    const { id, file } = req.params;
-    if (!id || !file) {
-        return res.redirect('../instances');
-    }
-
-    const instance = await db.get(id + '_instance').catch(err => {
-        console.error('Failed to fetch instance:', err);
-        return null;
-    });
-
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
-
-    if (!instance || !instance.VolumeId) {
-        return res.redirect('../instances');
-    }
-
-    let query;
-    if (req.query.path) {
-        query = '?path=' + req.query.path
-    } else {
-        query = ''
-    }
-
-    if (instance.Node && instance.Node.address && instance.Node.port) {
-        const RequestData = {
-            method: 'get',
-            url: `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/view/${file}${query}`,
-            auth: {
-                username: 'Vanthasy',
-                password: instance.Node.apiKey
-            },
-            headers: { 
-                'Content-Type': 'application/json'
-            }
-        };
-
-        try {
-            const response = await axios(RequestData);
-            const file = response.data.content || [];
-
-            res.render('file', { req, file, user: req.user, name: await db.get('name') || 'Vanthasy' });
-        } catch (error) {
-            const errorMessage = error.response && error.response.data ? error.response.data.message : 'Connection to node failed.';
-            res.status(500).render('500', { error: errorMessage, req, user: req.user, name: await db.get('name') || 'Vanthasy' });
-        }
-    } else {
-        res.status(500).send('Invalid instance node configuration');
-    }
+  } else {
+    res.status(500).send("Invalid instance node configuration");
+  }
 });
 
 /**
@@ -216,76 +262,101 @@ router.get("/instance/:id/files/view/:file", async (req, res) => {
  * @returns {Response} Renders the create file page.
  */
 router.get("/instance/:id/files/create", async (req, res) => {
-    if (!req.user) {
-        return res.redirect('/');
-    }
+  if (!req.user) {
+    return res.redirect("/");
+  }
 
-    const { id } = req.params;
-    if (!id) {
-        return res.redirect('../instances');
-    }
+  const { id } = req.params;
+  if (!id) {
+    return res.redirect("../instances");
+  }
 
-    const instance = await db.get(id + '_instance');
-    if (!instance) {
-        return res.status(404).send('Instance not found');
-    }
+  const instance = await db.get(id + "_instance");
+  if (!instance) {
+    return res.status(404).send("Instance not found");
+  }
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
 
-    if (!instance || !instance.VolumeId) {
-        return res.redirect('../instances');
-    }
+  if (!instance || !instance.VolumeId) {
+    return res.redirect("../instances");
+  }
 
-    res.render('createFile', { req, user: req.user, name: await db.get('name') || 'Vanthasy' });
+  res.render("createFile", {
+    req,
+    user: req.user,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
 
-router.post("/instance/:id/files/upload", upload.array('files'), async (req, res) => {
+router.post(
+  "/instance/:id/files/upload",
+  upload.array("files"),
+  async (req, res) => {
     if (!req.user) {
-        return res.status(401).send('Authentication required');
+      return res.status(401).send("Authentication required");
     }
 
     const { id } = req.params;
     const files = req.files;
-    const subPath = req.query.path || '';
+    const subPath = req.query.path || "";
 
     if (!id || files.length === 0) {
-        return res.status(400).send('No files uploaded or instance ID missing.');
+      return res.status(400).send("No files uploaded or instance ID missing.");
     }
 
-    const instance = await db.get(id + '_instance');
+    const instance = await db.get(id + "_instance");
     if (!instance) {
-        return res.status(404).send('Instance not found');
+      return res.status(404).send("Instance not found");
     }
 
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
+    const isAuthorized = await isUserAuthorizedForContainer(
+      req.user.userId,
+      instance.ContainerId
+    );
     if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
+      return res.status(403).send("Unauthorized access to this instance.");
     }
 
-    const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/upload?path=${encodeURIComponent(subPath)}`;
+    const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${
+      instance.VolumeId
+    }/files/upload?path=${encodeURIComponent(subPath)}`;
     const formData = new FormData();
 
-    files.forEach(file => {
-        formData.append('files', fs.createReadStream(file.path), file.originalname);
+    files.forEach((file) => {
+      formData.append(
+        "files",
+        fs.createReadStream(file.path),
+        file.originalname
+      );
     });
 
     try {
-        const response = await axios.post(apiUrl, formData, {
-            headers: {
-                ...formData.getHeaders(),
-                'Authorization': `Basic ${Buffer.from('Vanthasy:' + instance.Node.apiKey).toString('base64')}`,
-            }
-        });
-        res.json({ message: 'Files uploaded successfully', details: response.data });
+      const response = await axios.post(apiUrl, formData, {
+        headers: {
+          ...formData.getHeaders(),
+          Authorization: `Basic ${Buffer.from(
+            "Overvoid:" + instance.Node.apiKey
+          ).toString("base64")}`,
+        },
+      });
+      res.json({
+        message: "Files uploaded successfully",
+        details: response.data,
+      });
     } catch (error) {
-        console.log(error);
-        res.status(500).send('Failed to upload files to node.');
+      console.log(error);
+      res.status(500).send("Failed to upload files to node.");
     }
-});
+  }
+);
 
 /**
  * GET /instance/:id/files/folder/create
@@ -295,31 +366,38 @@ router.post("/instance/:id/files/upload", upload.array('files'), async (req, res
  * @returns {Response} Renders the create folder page.
  */
 router.get("/instance/:id/files/folder/create", async (req, res) => {
-    if (!req.user) {
-        return res.redirect('/');
-    }
+  if (!req.user) {
+    return res.redirect("/");
+  }
 
-    const { id } = req.params;
-    if (!id) {
-        return res.redirect('../instances');
-    }
+  const { id } = req.params;
+  if (!id) {
+    return res.redirect("../instances");
+  }
 
-    const instance = await db.get(id + '_instance');
-    if (!instance) {
-        return res.status(404).send('Instance not found');
-    }
+  const instance = await db.get(id + "_instance");
+  if (!instance) {
+    return res.status(404).send("Instance not found");
+  }
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
 
-    if (!instance || !instance.VolumeId) {
-        return res.redirect('../instances');
-    }
+  if (!instance || !instance.VolumeId) {
+    return res.redirect("../instances");
+  }
 
-    res.render('createFolder', { req, user: req.user, name: await db.get('name') || 'Vanthasy' });
+  res.render("createFolder", {
+    req,
+    user: req.user,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
 
 /**
@@ -329,62 +407,68 @@ router.get("/instance/:id/files/folder/create", async (req, res) => {
  * @param {string} filename - The name of the folder to create.
  * @returns {Response} JSON response indicating the result of the folder update operation from the node.
  */
-router.post("/instance/:id/files/folder/create/:foldername", async (req, res) => {
+router.post(
+  "/instance/:id/files/folder/create/:foldername",
+  async (req, res) => {
     if (!req.user) {
-        return res.status(401).send('Authentication required');
+      return res.status(401).send("Authentication required");
     }
 
     const { id, foldername } = req.params;
     const { content } = req.body;
 
-    const instance = await db.get(id + '_instance');
+    const instance = await db.get(id + "_instance");
     if (!instance) {
-        return res.status(404).send('Instance not found');
+      return res.status(404).send("Instance not found");
     }
 
     // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
+    const isAuthorized = await isUserAuthorizedForContainer(
+      req.user.userId,
+      instance.ContainerId
+    );
     if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
+      return res.status(403).send("Unauthorized access to this instance.");
     }
 
     if (!instance.Node || !instance.Node.address || !instance.Node.port) {
-        return res.status(500).send('Invalid instance node configuration');
+      return res.status(500).send("Invalid instance node configuration");
     }
 
     let query;
     if (req.query.path) {
-        query = '?path=' + req.query.path
+      query = "?path=" + req.query.path;
     } else {
-        query = ''
+      query = "";
     }
 
     const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/folders/create/${foldername}${query}`;
 
     const requestData = {
-        method: 'post',
-        url: apiUrl,
-        auth: {
-            username: 'Vanthasy',
-            password: instance.Node.apiKey
-        },
-        headers: { 'Content-Type': 'application/json' },
-        data: {
-            content: content
-        }
+      method: "post",
+      url: apiUrl,
+      auth: {
+        username: "Overvoid",
+        password: instance.Node.apiKey,
+      },
+      headers: { "Content-Type": "application/json" },
+      data: {
+        content: content,
+      },
     };
 
     try {
-        const response = await axios(requestData);
-        res.json(response.data);
+      const response = await axios(requestData);
+      res.json(response.data);
     } catch (error) {
-        if (error.response) {
-            res.status(error.response.status).send(error.response.data);
-        } else {
-            res.status(500).send({ message: 'Failed to communicate with node.' });
-        }
+      if (error.response) {
+        res.status(error.response.status).send(error.response.data);
+      } else {
+        res.status(500).send({ message: "Failed to communicate with node." });
+      }
     }
-});
+  }
+);
 
 /**
  * POST /instance/:id/files/create/:filename
@@ -394,60 +478,63 @@ router.post("/instance/:id/files/folder/create/:foldername", async (req, res) =>
  * @returns {Response} JSON response indicating the result of the file update operation from the node.
  */
 router.post("/instance/:id/files/create/:filename", async (req, res) => {
-    if (!req.user) {
-        return res.status(401).send('Authentication required');
-    }
+  if (!req.user) {
+    return res.status(401).send("Authentication required");
+  }
 
-    const { id, filename } = req.params;
-    const { content } = req.body;
+  const { id, filename } = req.params;
+  const { content } = req.body;
 
-    const instance = await db.get(id + '_instance');
-    if (!instance) {
-        return res.status(404).send('Instance not found');
-    }
+  const instance = await db.get(id + "_instance");
+  if (!instance) {
+    return res.status(404).send("Instance not found");
+  }
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
 
-    if (!instance.Node || !instance.Node.address || !instance.Node.port) {
-        return res.status(500).send('Invalid instance node configuration');
-    }
+  if (!instance.Node || !instance.Node.address || !instance.Node.port) {
+    return res.status(500).send("Invalid instance node configuration");
+  }
 
-    let query;
-    if (req.query.path) {
-        query = '?path=' + req.query.path
+  let query;
+  if (req.query.path) {
+    query = "?path=" + req.query.path;
+  } else {
+    query = "";
+  }
+
+  const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/create/${filename}${query}`;
+
+  const requestData = {
+    method: "post",
+    url: apiUrl,
+    auth: {
+      username: "Overvoid",
+      password: instance.Node.apiKey,
+    },
+    headers: { "Content-Type": "application/json" },
+    data: {
+      content: content,
+    },
+  };
+
+  try {
+    const response = await axios(requestData);
+    res.json(response.data);
+  } catch (error) {
+    if (error.response) {
+      res.status(error.response.status).send(error.response.data);
     } else {
-        query = ''
+      res.status(500).send({ message: "Failed to communicate with node." });
     }
-
-    const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/create/${filename}${query}`;
-
-    const requestData = {
-        method: 'post',
-        url: apiUrl,
-        auth: {
-            username: 'Vanthasy',
-            password: instance.Node.apiKey
-        },
-        headers: { 'Content-Type': 'application/json' },
-        data: {
-            content: content
-        }
-    };
-
-    try {
-        const response = await axios(requestData);
-        res.json(response.data);
-    } catch (error) {
-        if (error.response) {
-            res.status(error.response.status).send(error.response.data);
-        } else {
-            res.status(500).send({ message: 'Failed to communicate with node.' });
-        }
-    }
+  }
 });
 
 /**
@@ -460,60 +547,63 @@ router.post("/instance/:id/files/create/:filename", async (req, res) => {
  * @returns {Response} JSON response indicating the result of the file update operation from the node.
  */
 router.post("/instance/:id/files/edit/:filename", async (req, res) => {
-    if (!req.user) {
-        return res.status(401).send('Authentication required');
-    }
+  if (!req.user) {
+    return res.status(401).send("Authentication required");
+  }
 
-    const { id, filename } = req.params;
-    const { content } = req.body;
+  const { id, filename } = req.params;
+  const { content } = req.body;
 
-    const instance = await db.get(id + '_instance');
-    if (!instance) {
-        return res.status(404).send('Instance not found');
-    }
+  const instance = await db.get(id + "_instance");
+  if (!instance) {
+    return res.status(404).send("Instance not found");
+  }
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return res.status(403).send('Unauthorized access to this instance.');
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return res.status(403).send("Unauthorized access to this instance.");
+  }
 
-    if (!instance.Node || !instance.Node.address || !instance.Node.port) {
-        return res.status(500).send('Invalid instance node configuration');
-    }
+  if (!instance.Node || !instance.Node.address || !instance.Node.port) {
+    return res.status(500).send("Invalid instance node configuration");
+  }
 
-    let query;
-    if (req.query.path) {
-        query = '?path=' + req.query.path
+  let query;
+  if (req.query.path) {
+    query = "?path=" + req.query.path;
+  } else {
+    query = "";
+  }
+
+  const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/edit/${filename}${query}`;
+
+  const requestData = {
+    method: "post",
+    url: apiUrl,
+    auth: {
+      username: "Overvoid",
+      password: instance.Node.apiKey,
+    },
+    headers: { "Content-Type": "application/json" },
+    data: {
+      content: content,
+    },
+  };
+
+  try {
+    const response = await axios(requestData);
+    res.json(response.data);
+  } catch (error) {
+    if (error.response) {
+      res.status(error.response.status).send(error.response.data);
     } else {
-        query = ''
+      res.status(500).send({ message: "Failed to communicate with node." });
     }
-
-    const apiUrl = `http://${instance.Node.address}:${instance.Node.port}/fs/${instance.VolumeId}/files/edit/${filename}${query}`;
-
-    const requestData = {
-        method: 'post',
-        url: apiUrl,
-        auth: {
-            username: 'Vanthasy',
-            password: instance.Node.apiKey
-        },
-        headers: { 'Content-Type': 'application/json' },
-        data: {
-            content: content
-        }
-    };
-
-    try {
-        const response = await axios(requestData);
-        res.json(response.data);
-    } catch (error) {
-        if (error.response) {
-            res.status(error.response.status).send(error.response.data);
-        } else {
-            res.status(500).send({ message: 'Failed to communicate with node.' });
-        }
-    }
+  }
 });
 
 /**
@@ -527,43 +617,48 @@ router.post("/instance/:id/files/edit/:filename", async (req, res) => {
  * if authorization fails, the instance is invalid, or the backend service is down.
  */
 router.ws("/console/:id", async (ws, req) => {
-    if (!req.user) return ws.close(1008, "Authorization required"); 
+  if (!req.user) return ws.close(1008, "Authorization required");
 
-    const { id } = req.params;
-    const instance = await db.get(id + '_instance');
+  const { id } = req.params;
+  const instance = await db.get(id + "_instance");
 
-    if (!instance || !id) return ws.close(1008, "Invalid instance or ID"); 
+  if (!instance || !id) return ws.close(1008, "Invalid instance or ID");
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return ws.close(1008, "Unauthorized access");
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return ws.close(1008, "Unauthorized access");
+  }
 
-    const node = instance.Node;
-    const socket = new WebSocket(`ws://${node.address}:${node.port}/exec/${id}`);
+  const node = instance.Node;
+  const socket = new WebSocket(`ws://${node.address}:${node.port}/exec/${id}`);
 
-    socket.onopen = () => {
-        socket.send(JSON.stringify({ "event": "auth", "args": [node.apiKey] }));
-    };
+  socket.onopen = () => {
+    socket.send(JSON.stringify({ event: "auth", args: [node.apiKey] }));
+  };
 
-    socket.onmessage = msg => {
-        ws.send(msg.data);
-    };
+  socket.onmessage = (msg) => {
+    ws.send(msg.data);
+  };
 
-    socket.onerror = (error) => {
-        ws.send('\x1b[31;1mThis instance is unavailable! \n\x1b[0mThe Vanthasyd instance appears to be down. Retrying...')
-    };
+  socket.onerror = (error) => {
+    ws.send(
+      "\x1b[31;1mThis instance is unavailable! \n\x1b[0mThe Overvoidd instance appears to be down. Retrying..."
+    );
+  };
 
-    socket.onclose = (event) => {};
+  socket.onclose = (event) => {};
 
-    ws.onmessage = msg => {
-        socket.send(msg.data);
-    };
+  ws.onmessage = (msg) => {
+    socket.send(msg.data);
+  };
 
-    ws.on('close', () => {
-        socket.close(); 
-    });
+  ws.on("close", () => {
+    socket.close();
+  });
 });
 
 /**
@@ -577,43 +672,48 @@ router.ws("/console/:id", async (ws, req) => {
  * issues with authorization, instance validity, or backend service connectivity.
  */
 router.ws("/stats/:id", async (ws, req) => {
-    if (!req.user) return ws.close(1008, "Authorization required");  // Use ws.close with a reason
+  if (!req.user) return ws.close(1008, "Authorization required"); // Use ws.close with a reason
 
-    const { id } = req.params;
-    const instance = await db.get(id + '_instance');
+  const { id } = req.params;
+  const instance = await db.get(id + "_instance");
 
-    if (!instance || !id) return ws.close(1008, "Invalid instance or ID");  // Use ws.close with a reason
+  if (!instance || !id) return ws.close(1008, "Invalid instance or ID"); // Use ws.close with a reason
 
-    // Authorization check
-    const isAuthorized = await isUserAuthorizedForContainer(req.user.userId, instance.ContainerId);
-    if (!isAuthorized) {
-        return ws.close(1008, "Unauthorized access");
-    }
+  // Authorization check
+  const isAuthorized = await isUserAuthorizedForContainer(
+    req.user.userId,
+    instance.ContainerId
+  );
+  if (!isAuthorized) {
+    return ws.close(1008, "Unauthorized access");
+  }
 
-    const node = instance.Node;
-    const socket = new WebSocket(`ws://${node.address}:${node.port}/stats/${id}`);
+  const node = instance.Node;
+  const socket = new WebSocket(`ws://${node.address}:${node.port}/stats/${id}`);
 
-    socket.onopen = () => {
-        socket.send(JSON.stringify({ "event": "auth", "args": [node.apiKey] }));
-    };
+  socket.onopen = () => {
+    socket.send(JSON.stringify({ event: "auth", args: [node.apiKey] }));
+  };
 
-    socket.onmessage = msg => {
-        ws.send(msg.data);
-    };
+  socket.onmessage = (msg) => {
+    ws.send(msg.data);
+  };
 
-    socket.onerror = (error) => {
-        ws.send('\x1b[31;1mThis instance is unavailable! \x1b[0mThe Vanthasyd instance appears to be down. Retrying...')
-    };
+  socket.onerror = (error) => {
+    ws.send(
+      "\x1b[31;1mThis instance is unavailable! \x1b[0mThe Overvoidd instance appears to be down. Retrying..."
+    );
+  };
 
-    socket.onclose = (event) => {};
+  socket.onclose = (event) => {};
 
-    ws.onmessage = msg => {
-        socket.send(msg.data);
-    };
+  ws.onmessage = (msg) => {
+    socket.send(msg.data);
+  };
 
-    ws.on('close', () => {
-        socket.close(); 
-    });
+  ws.on("close", () => {
+    socket.close();
+  });
 });
 
 module.exports = router;

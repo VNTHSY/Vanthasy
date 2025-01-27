@@ -1,300 +1,403 @@
 <%- include('../components/template') %>
 <main>
   <style>
-.input-error {
-    border: 2px solid rgb(255, 69, 69);
-}
+    .input-error {
+      border: 2px solid rgb(255, 69, 69);
+    }
 
-.error-message {
-    color: rgb(255, 69, 69);
-    font-size: 0.9rem; /* Adjust size as needed */
-}
+    .error-message {
+      color: rgb(255, 69, 69);
+      font-size: 0.9rem; /* Adjust size as needed */
+    }
   </style>
-   <div class="bg-transparent">
-      <div class="sm:flex sm:items-center px-8 pt-4">
-         <div class="sm:flex-auto">
-           <h1 class="text-base font-semibold leading-6 text-white">Instances</h1>
-           <p class="mt-1 tracking-tight text-sm text-neutral-500">A list of all the instances deployed on the Vanthasy panel.</p>
-         </div>
-         <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-           <button id="createButton" type="button" class="block rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-neutral-800 shadow-lg hover:bg-neutral-200 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Create new instance</button>
-         </div>
-       </div>
-      <div style="display: block;" id="nodeTable" class="mt-6 w-full">
+  <div class="bg-transparent">
+    <div class="sm:flex sm:items-center px-8 pt-4">
+      <div class="sm:flex-auto">
+        <h1 class="text-base font-semibold leading-6 text-white">Instances</h1>
+        <p class="mt-1 tracking-tight text-sm text-neutral-500">
+          A list of all the instances deployed on the Overvoid panel.
+        </p>
+      </div>
+      <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+        <button
+          id="createButton"
+          type="button"
+          class="block rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-neutral-800 shadow-lg hover:bg-neutral-200 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        >
+          Create new instance
+        </button>
+      </div>
+    </div>
+    <div style="display: block" id="nodeTable" class="mt-6 w-full">
       <table class="mt-6 w-full whitespace-nowrap text-left">
         <colgroup>
-          <col class="w-full sm:w-4/12">
-          <col class="lg:w-4/12">
-          <col class="lg:w-2/12">
-          <col class="lg:w-1/12">
-          <col class="lg:w-1/12">
+          <col class="w-full sm:w-4/12" />
+          <col class="lg:w-4/12" />
+          <col class="lg:w-2/12" />
+          <col class="lg:w-1/12" />
+          <col class="lg:w-1/12" />
         </colgroup>
         <thead class="border-b border-white/5 text-sm leading-6 text-white">
           <tr>
-            <th scope="col" class="py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8">Name</th>
-			<th scope="col" class="py-2 pl-0 pr-8 font-semibold sm:table-cell">Node</th>
-            <th scope="col" class="py-2 pl-0 pr-8 font-semibold sm:table-cell">Docker ID</th>
-            <th scope="col" class="py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20">Volume / Mount</th>
+            <th
+              scope="col"
+              class="py-2 pl-4 pr-8 font-semibold sm:pl-6 lg:pl-8"
+            >
+              Name
+            </th>
+            <th scope="col" class="py-2 pl-0 pr-8 font-semibold sm:table-cell">
+              Node
+            </th>
+            <th scope="col" class="py-2 pl-0 pr-8 font-semibold sm:table-cell">
+              Docker ID
+            </th>
+            <th
+              scope="col"
+              class="py-2 pl-0 pr-4 text-right font-semibold sm:pr-8 sm:text-left lg:pr-20"
+            >
+              Volume / Mount
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-white/5">
-         <% instances.forEach(function(instance) { %>
+          <% instances.forEach(function(instance) { %>
           <tr>
             <td class="py-4 pl-4 pr-8 sm:pl-6 lg:pl-8">
               <div class="flex items-center gap-x-4">
-                <div class="truncate text-sm font-medium leading-6 text-white"><%= instance.Name %></div>
+                <div class="truncate text-sm font-medium leading-6 text-white">
+                  <%= instance.Name %>
+                </div>
               </div>
             </td>
             <td class="py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
               <div class="flex gap-x-3">
-                <div class="font-mono text-sm leading-6 text-neutral-400"><%= instance.Node.name %></div>
+                <div class="font-mono text-sm leading-6 text-neutral-400">
+                  <%= instance.Node.name %>
+                </div>
               </div>
             </td>
             <td class="py-4 pl-0 pr-4 sm:table-cell sm:pr-8">
               <div class="flex gap-x-3">
-                <div class="font-mono text-sm leading-6 text-neutral-400"><%= instance.ContainerId %></div>
+                <div class="font-mono text-sm leading-6 text-neutral-400">
+                  <%= instance.ContainerId %>
+                </div>
               </div>
             </td>
             <td class="py-4 pl-0 pr-4 text-sm leading-6 sm:pr-8 lg:pr-20">
               <div class="flex gap-x-3">
-                <div class="font-mono text-sm leading-6 text-neutral-400">/volumes/<%= instance.VolumeId %></div>
+                <div class="font-mono text-sm leading-6 text-neutral-400">
+                  /volumes/<%= instance.VolumeId %>
+                </div>
               </div>
             </td>
           </tr>
           <% }); %>
         </tbody>
       </table>
-      </div>
-      <div style="display: none;"  id="nodeForm" class="mt-6 px-8 w-full">
-        <form>
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">Name:</label>
-         <input id="name" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="My node">
+    </div>
+    <div style="display: none" id="nodeForm" class="mt-6 px-8 w-full">
+      <form>
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >Name:</label
+        >
+        <input
+          id="name"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+          placeholder="My node"
+        />
 
-         <div class="mb-6"></div>
+        <div class="mb-6"></div>
 
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">User:</label>
-         <select style="background: #171717;" id="user" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10">
-            <% users.forEach(function(user) { %>
-                <option value="<%= user.userId %>"><%= user.username %></option>
-            <% }); %>
-         </select>
-
-         <div class="mb-6"></div>
-
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">Image:</label>
-         <select style="background: #171717;" id="image" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10">
-          <% images.forEach(function(image) { %>
-              <option value="<%= image.Image %>" data-configfilepath="<%= image.ConfigFilePath %>" data-configfilecontent="<%= image.ConfigFileContent %>"><%= image.Name %> (<%= image.Image %>)</option>
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >User:</label
+        >
+        <select
+          style="background: #171717"
+          id="user"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+        >
+          <% users.forEach(function(user) { %>
+          <option value="<%= user.userId %>"><%= user.username %></option>
           <% }); %>
-          </select>      
+        </select>
 
-         <div class="mb-6"></div>
+        <div class="mb-6"></div>
 
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">Node:</label>
-         <select style="background: #171717;" id="node" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10">
-            <% nodes.forEach(function(node) { %>
-                <option value="<%= node.id %>"><%= node.name %></option>
-            <% }); %>
-         </select>
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >Image:</label
+        >
+        <select
+          style="background: #171717"
+          id="image"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+        >
+          <% images.forEach(function(image) { %>
+          <option
+            value="<%= image.Image %>"
+            data-configfilepath="<%= image.ConfigFilePath %>"
+            data-configfilecontent="<%= image.ConfigFileContent %>"
+          >
+            <%= image.Name %> (<%= image.Image %>)
+          </option>
+          <% }); %>
+        </select>
 
-         <div class="mb-6"></div>
+        <div class="mb-6"></div>
 
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">Memory (MiB):</label>
-         <input id="memory" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="2">
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >Node:</label
+        >
+        <select
+          style="background: #171717"
+          id="node"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+        >
+          <% nodes.forEach(function(node) { %>
+          <option value="<%= node.id %>"><%= node.name %></option>
+          <% }); %>
+        </select>
 
-         <div class="mb-6"></div>
+        <div class="mb-6"></div>
 
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">CPU Threads:</label>
-         <input id="cpu" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="1">
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >Memory (MiB):</label
+        >
+        <input
+          id="memory"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+          placeholder="2"
+        />
 
-         <div class="mb-6"></div>
+        <div class="mb-6"></div>
 
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">Ports:</label>
-         <input id="ports" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="25565:25565,8080:8080">
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >CPU Threads:</label
+        >
+        <input
+          id="cpu"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+          placeholder="1"
+        />
 
-         <div class="mb-6"></div>
+        <div class="mb-6"></div>
 
-         <label class="text-neutral-400 text-sm tracking-tight mb-2">Primary Port:</label>
-         <input id="primary" class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10" placeholder="25565">
-    
-         <div class="mb-6"></div>
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >Ports:</label
+        >
+        <input
+          id="ports"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+          placeholder="25565:25565,8080:8080"
+        />
 
-         <button id="createNodeBtn" type="button" class="block rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-neutral-800 shadow-lg hover:bg-neutral-200 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Create</button>
+        <div class="mb-6"></div>
+
+        <label class="text-neutral-400 text-sm tracking-tight mb-2"
+          >Primary Port:</label
+        >
+        <input
+          id="primary"
+          class="rounded-lg focus:ring-transparent focus:border-transparent text-white text-sm mt-2 w-96 items-center transition justify-left gap-16 hover:bg-white/5 px-4 py-2 flex border-white/5 bg-neutral-900 placeholder:text-white/20 text-white border border-black/10"
+          placeholder="25565"
+        />
+
+        <div class="mb-6"></div>
+
+        <button
+          id="createNodeBtn"
+          type="button"
+          class="block rounded-lg bg-white px-3 py-2 text-center text-sm font-semibold text-neutral-800 shadow-lg hover:bg-neutral-200 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        >
+          Create
+        </button>
       </form>
     </div>
-    </div>
+  </div>
 </main>
 <script>
-  document.getElementById('createButton').addEventListener('click', function() {
-    var table = document.getElementById('nodeTable');
-    var form = document.getElementById('nodeForm');
-    if (table.style.display !== 'none') {
-      table.style.display = 'none';
-      form.style.display = 'block';
-    } else {
-      table.style.display = 'block';
-      form.style.display = 'none';
-    }
-  });
+  document
+    .getElementById("createButton")
+    .addEventListener("click", function () {
+      var table = document.getElementById("nodeTable");
+      var form = document.getElementById("nodeForm");
+      if (table.style.display !== "none") {
+        table.style.display = "none";
+        form.style.display = "block";
+      } else {
+        table.style.display = "block";
+        form.style.display = "none";
+      }
+    });
 
-  document.getElementById('image').addEventListener('change', function() {
+  document.getElementById("image").addEventListener("change", function () {
     const selectedOption = this.options[this.selectedIndex];
-    const cmd = selectedOption.getAttribute('data-cmd');
-    const env = JSON.parse(selectedOption.getAttribute('data-env') || '{}');
+    const cmd = selectedOption.getAttribute("data-cmd");
+    const env = JSON.parse(selectedOption.getAttribute("data-env") || "{}");
   });
 </script>
 <script>
-document.getElementById('createNodeBtn').addEventListener('click', function() {
-    const createBtn = this;
-    createBtn.textContent = 'Working on it...'; // Change the button text
-    createBtn.disabled = true; // Disable the button
+  document
+    .getElementById("createNodeBtn")
+    .addEventListener("click", function () {
+      const createBtn = this;
+      createBtn.textContent = "Working on it..."; // Change the button text
+      createBtn.disabled = true; // Disable the button
 
-    const name = document.getElementById('name');
-    const memory = document.getElementById('memory');
-    const cpu = document.getElementById('cpu');
-    const ports = document.getElementById('ports');
-    const imageDropdown = document.getElementById('image');
-    const primaryPort = document.getElementById('primary');
-    const selectedImage = imageDropdown.options[imageDropdown.selectedIndex];
-    const configFilePath = selectedImage.getAttribute('data-configfilepath');
-    let configFileContent = selectedImage.getAttribute('data-configfilecontent');
+      const name = document.getElementById("name");
+      const memory = document.getElementById("memory");
+      const cpu = document.getElementById("cpu");
+      const ports = document.getElementById("ports");
+      const imageDropdown = document.getElementById("image");
+      const primaryPort = document.getElementById("primary");
+      const selectedImage = imageDropdown.options[imageDropdown.selectedIndex];
+      const configFilePath = selectedImage.getAttribute("data-configfilepath");
+      let configFileContent = selectedImage.getAttribute(
+        "data-configfilecontent"
+      );
 
-    // Clear previous errors
-    clearValidationErrors();
+      // Clear previous errors
+      clearValidationErrors();
 
-    let isValid = true;
+      let isValid = true;
 
-    // Validate name (no spaces allowed)
-    if (name.value.includes(' ')) {
-        showError(name, 'Name must not contain spaces.');
+      // Validate name (no spaces allowed)
+      if (name.value.includes(" ")) {
+        showError(name, "Name must not contain spaces.");
         isValid = false;
-    }
+      }
 
-    // Validate memory and CPU (must be integers greater than 1)
-    if (!isPositiveInteger(memory.value)) {
-        showError(memory, 'Memory must be an integer greater than 1.');
+      // Validate memory and CPU (must be integers greater than 1)
+      if (!isPositiveInteger(memory.value)) {
+        showError(memory, "Memory must be an integer greater than 1.");
         isValid = false;
-    }
+      }
 
-    if (!isPositiveIntegerCpu(cpu.value)) {
-        showError(cpu, 'CPU must be an integer greater than 0.');
+      if (!isPositiveIntegerCpu(cpu.value)) {
+        showError(cpu, "CPU must be an integer greater than 0.");
         isValid = false;
-    }
+      }
 
-    // Validate ports (must match the format "port:port,port:port")
-    const portPattern = /^(\d+:\d+)(,\d+:\d+)*$/;
-    if (!ports.value.match(portPattern)) {
+      // Validate ports (must match the format "port:port,port:port")
+      const portPattern = /^(\d+:\d+)(,\d+:\d+)*$/;
+      if (!ports.value.match(portPattern)) {
         showError(ports, 'Ports must be in the format "port:port,port:port".');
         isValid = false;
-    }
+      }
 
-    // Validate primary port (must be a number)
-    if (!primaryPort.value.match(/^\d+$/)) {
-        showError(primaryPort, 'Primary port must be a valid number.');
+      // Validate primary port (must be a number)
+      if (!primaryPort.value.match(/^\d+$/)) {
+        showError(primaryPort, "Primary port must be a valid number.");
         isValid = false;
-    } else {
+      } else {
         // Replace {{primaryPort}} in configFileContent
-        configFileContent = configFileContent.replace('{{primaryPort}}', primaryPort.value);
-    }
+        configFileContent = configFileContent.replace(
+          "{{primaryPort}}",
+          primaryPort.value
+        );
+      }
 
-    if (!isValid) {
-        createBtn.textContent = 'Create';
+      if (!isValid) {
+        createBtn.textContent = "Create";
         createBtn.disabled = false;
         return;
-    }
+      }
 
-    const nodeData = {
+      const nodeData = {
         name: name.value,
         image: imageDropdown.value,
-        nodeId: document.getElementById('node').value,
-        user: document.getElementById('user').value,
+        nodeId: document.getElementById("node").value,
+        user: document.getElementById("user").value,
         memory: memory.value,
         cpu: cpu.value,
         ports: ports.value,
         configFilePath: configFilePath,
-        configFileContent: configFileContent
-    };
+        configFileContent: configFileContent,
+      };
 
-    // Proceed with sending data
-    sendData(nodeData, createBtn);
-});
+      // Proceed with sending data
+      sendData(nodeData, createBtn);
+    });
 
-function clearValidationErrors() {
-    const inputs = document.querySelectorAll('.input-error');
-    const messages = document.querySelectorAll('.error-message');
-    inputs.forEach(input => input.classList.remove('input-error'));
-    messages.forEach(msg => msg.remove());
-}
+  function clearValidationErrors() {
+    const inputs = document.querySelectorAll(".input-error");
+    const messages = document.querySelectorAll(".error-message");
+    inputs.forEach((input) => input.classList.remove("input-error"));
+    messages.forEach((msg) => msg.remove());
+  }
 
-// Serialize and send request as before
-function serializeParams(params) {
+  // Serialize and send request as before
+  function serializeParams(params) {
     return Object.keys(params)
-        .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(params[key]))
-        .join('&');
-    }
-    
-function showError(element, message) {
-    element.classList.add('input-error');
-    const errorDiv = document.createElement('div');
-    errorDiv.textContent = message;
-    errorDiv.className = 'error-message';
-    element.parentNode.insertBefore(errorDiv, element.nextSibling);
-}
+      .map(
+        (key) => encodeURIComponent(key) + "=" + encodeURIComponent(params[key])
+      )
+      .join("&");
+  }
 
-function isPositiveInteger(value) {
+  function showError(element, message) {
+    element.classList.add("input-error");
+    const errorDiv = document.createElement("div");
+    errorDiv.textContent = message;
+    errorDiv.className = "error-message";
+    element.parentNode.insertBefore(errorDiv, element.nextSibling);
+  }
+
+  function isPositiveInteger(value) {
     const num = parseInt(value, 10);
     return Number.isInteger(num) && num > 1;
-}
+  }
 
-function isPositiveIntegerCpu(value) {
+  function isPositiveIntegerCpu(value) {
     const num = parseInt(value, 10);
     return Number.isInteger(num) && num > 0;
-}
+  }
 
-function sendData(nodeData, createBtn) {
-    const baseUrl = '/instances/deploy';
+  function sendData(nodeData, createBtn) {
+    const baseUrl = "/instances/deploy";
     const queryParams = serializeParams(nodeData);
     const fullUrl = `${baseUrl}?${queryParams}`;
 
     fetch(fullUrl, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
     })
-    .then(response => {
+      .then((response) => {
         if (response.ok) {
-            return response.json();
+          return response.json();
         } else {
-            throw new Error('Failed to create instance');
+          throw new Error("Failed to create instance");
         }
-    })
-    .then(data => {
-        alert('Done! Instance created successfully.');
-        console.log('Instance created:', data);
-        createBtn.textContent = 'Create';
+      })
+      .then((data) => {
+        alert("Done! Instance created successfully.");
+        console.log("Instance created:", data);
+        createBtn.textContent = "Create";
         createBtn.disabled = false;
-    })
-    .catch(error => {
-        console.error('Error creating instance:', error);
-        alert('Error! Instance creation failed. Check the console for more details.');
-        createBtn.textContent = 'Create';
+      })
+      .catch((error) => {
+        console.error("Error creating instance:", error);
+        alert(
+          "Error! Instance creation failed. Check the console for more details."
+        );
+        createBtn.textContent = "Create";
         createBtn.disabled = false;
-    });
-}
+      });
+  }
 
-function handleResponse(response) {
+  function handleResponse(response) {
     if (response.ok) {
-        return response.json();
+      return response.json();
     }
-    throw new Error('Failed to create instance');
-}
+    throw new Error("Failed to create instance");
+  }
 
-function handleError(error) {
-    console.error('Error creating instance:', error);
-    alert('Error! Check the console for more details.');
-    createBtn.textContent = 'Create';
+  function handleError(error) {
+    console.error("Error creating instance:", error);
+    alert("Error! Check the console for more details.");
+    createBtn.textContent = "Create";
     createBtn.disabled = false;
-}
+  }
 </script>
 <%- include('../components/footer') %>

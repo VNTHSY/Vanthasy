@@ -5,13 +5,13 @@
  * these routes.
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
-const axios = require('axios');
-const { db } = require('../handlers/db.js');
-const config = require('../config.json');
-const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require("uuid");
+const axios = require("axios");
+const { db } = require("../handlers/db.js");
+const config = require("../config.json");
+const bcrypt = require("bcrypt");
 const saltRounds = process.env.SALT_ROUNDS || 10;
 
 /**
@@ -26,17 +26,17 @@ const saltRounds = process.env.SALT_ROUNDS || 10;
  */
 function isAdmin(req, res, next) {
   if (!req.user || req.user.admin !== true) {
-    return res.redirect('../');
+    return res.redirect("../");
   }
   next();
 }
 
 async function doesUserExist(username) {
-  const users = await db.get('users');
+  const users = await db.get("users");
   if (users) {
-      return users.some(user => user.username === username);
+    return users.some((user) => user.username === username);
   } else {
-      return false; // If no users found, return false
+    return false; // If no users found, return false
   }
 }
 
@@ -51,30 +51,31 @@ async function doesUserExist(username) {
 async function checkNodeStatus(node) {
   try {
     const RequestData = {
-      method: 'get',
-      url: 'http://' + node.address + ':' + node.port + '/',
+      method: "get",
+      url: "http://" + node.address + ":" + node.port + "/",
       auth: {
-        username: 'Vanthasy',
-        password: node.apiKey
+        username: "Overvoid",
+        password: node.apiKey,
       },
-      headers: { 
-        'Content-Type': 'application/json'
-      }
+      headers: {
+        "Content-Type": "application/json",
+      },
     };
     const response = await axios(RequestData);
-    const { versionFamily, versionRelease, online, remote, docker } = response.data;
+    const { versionFamily, versionRelease, online, remote, docker } =
+      response.data;
 
-    node.status = 'Online';
+    node.status = "Online";
     node.versionFamily = versionFamily;
     node.versionRelease = versionRelease;
     node.remote = remote;
     node.docker = docker;
 
-    await db.set(node.id + '_node', node); // Update node info with new details
+    await db.set(node.id + "_node", node); // Update node info with new details
     return node;
   } catch (error) {
-    node.status = 'Offline';
-    await db.set(node.id + '_node', node); // Update node as offline if there's an error
+    node.status = "Offline";
+    await db.set(node.id + "_node", node); // Update node as offline if there's an error
     return node;
   }
 }
@@ -87,9 +88,11 @@ async function checkNodeStatus(node) {
  *
  * @returns {Response} Returns a JSON array of all nodes with their updated statuses.
  */
-router.get('/nodes/debug', isAdmin, async (req, res) => {
-  const nodeIds = await db.get('nodes') || [];
-  const nodes = await Promise.all(nodeIds.map(id => db.get(id + '_node').then(checkNodeStatus)));
+router.get("/nodes/debug", isAdmin, async (req, res) => {
+  const nodeIds = (await db.get("nodes")) || [];
+  const nodes = await Promise.all(
+    nodeIds.map((id) => db.get(id + "_node").then(checkNodeStatus))
+  );
   res.json(nodes);
 });
 
@@ -100,8 +103,8 @@ router.get('/nodes/debug', isAdmin, async (req, res) => {
  *
  * @returns {Response} Returns a JSON object containing user details if available; otherwise, sends a debug error message.
  */
-router.get('/account/debug', isAdmin, async (req, res) => {
-  if (!req.user) res.send('no req.user present!')
+router.get("/account/debug", isAdmin, async (req, res) => {
+  if (!req.user) res.send("no req.user present!");
   res.json(req.user);
 });
 
@@ -112,22 +115,33 @@ router.get('/account/debug', isAdmin, async (req, res) => {
  *
  * @returns {Response} Renders the 'overview' view with the total counts.
  */
-router.get('/admin/overview', isAdmin, async (req, res) => {
+router.get("/admin/overview", isAdmin, async (req, res) => {
   try {
-      const users = await db.get('users') || [];
-      const nodes = await db.get('nodes') || [];
-      const images = await db.get('images') || [];
-      const instances = await db.get('instances') || [];
+    const users = (await db.get("users")) || [];
+    const nodes = (await db.get("nodes")) || [];
+    const images = (await db.get("images")) || [];
+    const instances = (await db.get("instances")) || [];
 
-      // Calculate the total number of each type of object
-      const usersTotal = users.length;
-      const nodesTotal = nodes.length;
-      const imagesTotal = images.length;
-      const instancesTotal = instances.length;
+    // Calculate the total number of each type of object
+    const usersTotal = users.length;
+    const nodesTotal = nodes.length;
+    const imagesTotal = images.length;
+    const instancesTotal = instances.length;
 
-      res.render('admin/overview', { req, user: req.user, usersTotal, nodesTotal, imagesTotal, instancesTotal, version: config.version, name: await db.get('name') || 'Vanthasy' });
+    res.render("admin/overview", {
+      req,
+      user: req.user,
+      usersTotal,
+      nodesTotal,
+      imagesTotal,
+      instancesTotal,
+      version: config.version,
+      name: (await db.get("name")) || "Overvoid",
+    });
   } catch (error) {
-      res.status(500).send({ error: 'Failed to retrieve data from the database.' });
+    res
+      .status(500)
+      .send({ error: "Failed to retrieve data from the database." });
   }
 });
 
@@ -139,7 +153,7 @@ router.get('/admin/overview', isAdmin, async (req, res) => {
  *
  * @returns {Response} Sends the newly created and status-updated node data.
  */
-router.post('/nodes/create', isAdmin, async (req, res) => {
+router.post("/nodes/create", isAdmin, async (req, res) => {
   const node = {
     id: uuidv4(),
     name: req.body.name,
@@ -150,67 +164,75 @@ router.post('/nodes/create', isAdmin, async (req, res) => {
     address: req.body.address,
     port: req.body.port,
     apiKey: req.body.apiKey,
-    status: 'Unknown' // Default status
+    status: "Unknown", // Default status
   };
 
-  if (!req.body.name || !req.body.tags || !req.body.ram || !req.body.disk || !req.body.processor || !req.body.address || !req.body.port || !req.body.apiKey) return res.send('Form validation failure.')
+  if (
+    !req.body.name ||
+    !req.body.tags ||
+    !req.body.ram ||
+    !req.body.disk ||
+    !req.body.processor ||
+    !req.body.address ||
+    !req.body.port ||
+    !req.body.apiKey
+  )
+    return res.send("Form validation failure.");
 
-  await db.set(node.id + '_node', node); // Save the initial node info
+  await db.set(node.id + "_node", node); // Save the initial node info
   const updatedNode = await checkNodeStatus(node); // Check and update status
 
-  const nodes = await db.get('nodes') || [];
+  const nodes = (await db.get("nodes")) || [];
   nodes.push(node.id);
-  await db.set('nodes', nodes);
+  await db.set("nodes", nodes);
 
   res.status(201).send(updatedNode);
 });
 
-router.post('/users/create', isAdmin, async (req, res) => {
+router.post("/users/create", isAdmin, async (req, res) => {
   const user = {
     userId: uuidv4(),
     username: req.body.username,
     password: await bcrypt.hash(req.body.password, saltRounds),
-    admin: req.body.admin, 
-};
+    admin: req.body.admin,
+  };
 
-if (!req.body.username || !req.body.password) {
-  return res.send('Username and password are required.');
-}
+  if (!req.body.username || !req.body.password) {
+    return res.send("Username and password are required.");
+  }
 
-if (req.body.admin !== true && req.body.admin !== false) {
-  return res.send('Other values as true or false are not allowed!');
-}
+  if (req.body.admin !== true && req.body.admin !== false) {
+    return res.send("Other values as true or false are not allowed!");
+  }
 
+  const userExists = await doesUserExist(req.body.username);
+  if (userExists) {
+    return res.send("user already exists!");
+  }
 
-const userExists = await doesUserExist(req.body.username);
-if (userExists) {
-  return res.send("user already exists!");
-}
+  let users = (await db.get("users")) || [];
+  users.push(user);
+  await db.set("users", users);
 
-let users = await db.get('users') || [];
-users.push(user);
-await db.set('users', users);
+  console.log(user);
 
-console.log(user)
-
-res.status(201).send(user);
+  res.status(201).send(user);
 });
 
-router.delete('/user/delete', isAdmin, async (req, res) => {
+router.delete("/user/delete", isAdmin, async (req, res) => {
   const userId = req.body.userId;
-  const users = await db.get('users') || [];
+  const users = (await db.get("users")) || [];
 
-  const userIndex = users.findIndex(user => user.userId === userId);
+  const userIndex = users.findIndex((user) => user.userId === userId);
 
   if (userIndex === -1) {
-    return res.status(400).send('The specified user does not exist');
+    return res.status(400).send("The specified user does not exist");
   }
 
   users.splice(userIndex, 1);
-  await db.set('users', users);
+  await db.set("users", users);
   res.status(204).send();
 });
-
 
 /**
  * DELETE /nodes/delete
@@ -219,15 +241,15 @@ router.delete('/user/delete', isAdmin, async (req, res) => {
  *
  * @returns {Response} Sends a status response indicating the successful deletion of the node.
  */
-router.delete('/nodes/delete', isAdmin, async (req, res) => {
+router.delete("/nodes/delete", isAdmin, async (req, res) => {
   const nodeId = req.body.nodeId;
-  const nodes = await db.get('nodes') || [];
-  const newNodes = nodes.filter(id => id !== nodeId);
+  const nodes = (await db.get("nodes")) || [];
+  const newNodes = nodes.filter((id) => id !== nodeId);
 
-  if (!nodeId) return res.send('Invalid node')
+  if (!nodeId) return res.send("Invalid node");
 
-  await db.set('nodes', newNodes);
-  await db.delete(nodeId + '_node');
+  await db.set("nodes", newNodes);
+  await db.delete(nodeId + "_node");
 
   res.status(204).send();
 });
@@ -239,23 +261,30 @@ router.delete('/nodes/delete', isAdmin, async (req, res) => {
  *
  * @returns {Response} Renders the 'nodes' view with node data and user information.
  */
-router.get('/admin/nodes', isAdmin, async (req, res) => {
-  let nodes = await db.get('nodes') || [];
-  let instances = await db.get('instances') || [];
+router.get("/admin/nodes", isAdmin, async (req, res) => {
+  let nodes = (await db.get("nodes")) || [];
+  let instances = (await db.get("instances")) || [];
   let set = {};
-  nodes.forEach(function(node) {
-	  set[node] = 0;
-	  instances.forEach(function(instance) {
-		if (instance.Node.id == node) {
-			set[node]++;
-		}
-	  });
+  nodes.forEach(function (node) {
+    set[node] = 0;
+    instances.forEach(function (instance) {
+      if (instance.Node.id == node) {
+        set[node]++;
+      }
+    });
   });
-  nodes = await Promise.all(nodes.map(id => db.get(id + '_node').then(checkNodeStatus)));
+  nodes = await Promise.all(
+    nodes.map((id) => db.get(id + "_node").then(checkNodeStatus))
+  );
 
-  res.render('admin/nodes', { req, user: req.user, nodes, set, name: await db.get('name') || 'Vanthasy' });
+  res.render("admin/nodes", {
+    req,
+    user: req.user,
+    nodes,
+    set,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
-
 
 /**
  * GET /admin/settings
@@ -263,21 +292,23 @@ router.get('/admin/nodes', isAdmin, async (req, res) => {
  *
  * @returns {Response} Renders the 'nodes' view with node data and user information.
  */
-router.get('/admin/settings', isAdmin, async (req, res) => {
-
-
-  res.render('admin/settings', { req, user: req.user, name: await db.get('name') || 'Vanthasy' });
+router.get("/admin/settings", isAdmin, async (req, res) => {
+  res.render("admin/settings", {
+    req,
+    user: req.user,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
 
-router.post('/admin/settings/change/name', isAdmin, async (req, res) => {
+router.post("/admin/settings/change/name", isAdmin, async (req, res) => {
   const name = req.body.name;
   try {
-  await db.set('name', [name]);
-  res.redirect('/admin/settings?changednameto=' + name);
-} catch (err) {
-  console.error(err);
-  res.status(500).send("Database error");
-}
+    await db.set("name", [name]);
+    res.redirect("/admin/settings?changednameto=" + name);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Database error");
+  }
 });
 
 /**
@@ -287,21 +318,36 @@ router.post('/admin/settings/change/name', isAdmin, async (req, res) => {
  *
  * @returns {Response} Renders the 'instances' view with instance data and user information.
  */
-router.get('/admin/instances', isAdmin, async (req, res) => {
-  let instances = await db.get('instances') || [];
-  let images = await db.get('images') || [];
-  let nodes = await db.get('nodes') || [];
-  let users = await db.get('users') || [];
+router.get("/admin/instances", isAdmin, async (req, res) => {
+  let instances = (await db.get("instances")) || [];
+  let images = (await db.get("images")) || [];
+  let nodes = (await db.get("nodes")) || [];
+  let users = (await db.get("users")) || [];
 
-  nodes = await Promise.all(nodes.map(id => db.get(id + '_node').then(checkNodeStatus)));
+  nodes = await Promise.all(
+    nodes.map((id) => db.get(id + "_node").then(checkNodeStatus))
+  );
 
-  res.render('admin/instances', { req, user: req.user, instances, images, nodes, users, name: await db.get('name') || 'Vanthasy' });
+  res.render("admin/instances", {
+    req,
+    user: req.user,
+    instances,
+    images,
+    nodes,
+    users,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
 
-router.get('/admin/users', isAdmin, async (req, res) => {
-  let users = await db.get('users') || [];
+router.get("/admin/users", isAdmin, async (req, res) => {
+  let users = (await db.get("users")) || [];
 
-  res.render('admin/users', { req, user: req.user, users, name: await db.get('name') || 'Vanthasy' });
+  res.render("admin/users", {
+    req,
+    user: req.user,
+    users,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
 
 /**
@@ -314,16 +360,20 @@ router.get('/admin/users', isAdmin, async (req, res) => {
  * @returns {Response} Redirects to the nodes overview page if the node does not exist
  * or the ID is not provided. Otherwise, renders the node page with appropriate data.
  */
- 
+
 router.get("/admin/node/:id", async (req, res) => {
-    const { id } = req.params;
-    const node = await db.get(id + '_node');
+  const { id } = req.params;
+  const node = await db.get(id + "_node");
 
-    if (!node || !id) return res.redirect('../nodes')
+  if (!node || !id) return res.redirect("../nodes");
 
-    res.render('admin/node', { req, node, user: req.user, name: await db.get('name') || 'Vanthasy' });
+  res.render("admin/node", {
+    req,
+    node,
+    user: req.user,
+    name: (await db.get("name")) || "Overvoid",
+  });
 });
-
 
 /**
  * POST /admin/node/:id
@@ -331,30 +381,29 @@ router.get("/admin/node/:id", async (req, res) => {
  *
  * @returns {Response} Sends the node data if all goes ok else 400 if the node doesn't exist.
  */
- 
+
 router.post("/admin/node/:id", async (req, res) => {
+  const { id } = req.params;
+  const cnode = await db.get(id + "_node");
 
-	const { id } = req.params;
-	const cnode = await db.get(id + '_node');
+  if (!cnode || !id) return res.status(400).send();
 
-    if (!cnode || !id) return res.status(400).send();
-	
-    const node = {
-		id: id,
-		name: req.body.name,
-		tags: req.body.tags,
-		ram: req.body.ram,
-		disk: req.body.disk,
-		processor: req.body.processor,
-		address: req.body.address,
-		port: req.body.port,
-		apiKey: req.body.apiKey,
-		status: 'Unknown' // Default status
-	};
+  const node = {
+    id: id,
+    name: req.body.name,
+    tags: req.body.tags,
+    ram: req.body.ram,
+    disk: req.body.disk,
+    processor: req.body.processor,
+    address: req.body.address,
+    port: req.body.port,
+    apiKey: req.body.apiKey,
+    status: "Unknown", // Default status
+  };
 
-    await db.set(node.id + '_node', node); 
-	const updatedNode = await checkNodeStatus(node);
-	res.status(201).send(updatedNode);
+  await db.set(node.id + "_node", node);
+  const updatedNode = await checkNodeStatus(node);
+  res.status(201).send(updatedNode);
 });
 
 module.exports = router;

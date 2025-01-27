@@ -1,4 +1,4 @@
-const Keyv = require('keyv');
-const db = new Keyv('sqlite://Vanthasy.db');
+const Keyv = require("keyv");
+const db = new Keyv("sqlite://Overvoid.db");
 
-module.exports = { db }
+module.exports = { db };
